@@ -8,7 +8,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 :: =============================================================
 ::  • Extracts an archive to a folder with the same name.
 ::  • Collision handling:  O-Overwrite  C-Cancel  M-Merge  I-Increment  Z-Open in 7-Zip.
-::  • After extraction:  ENTER – delete + open folder | DEL – delete | any other key – exit CMD.
+::  • After extraction:  ENTER – delete + open folder | DEL – delete | any other key or no key – exit CMD.
 ::  • Save this file in UTF-8 (without BOM).
 :: =============================================================
 
@@ -105,11 +105,14 @@ echo.
 :: 4a) Handle 7-Zip errors
 if not "%EXCODE%"=="0" goto :EXTRACT_ERROR
 
-:: 5) After extraction: ENTER=delete+open, DEL=delete, other=exit
+:: 5) After extraction: ENTER=delete+open, DEL=delete, other/no key=exit (with 2.5s timeout)
 call :banner
-echo Press: ENTER = delete archive and open folder, DEL = delete archive, any other key = exit.
+echo Press ENTER (within 2.5 seconds) to delete archive and open folder.
+echo Press DEL (within 2.5 seconds) to delete archive only.
+echo Any other key or no key will keep the archive and exit.
+
 powershell -NoLogo -NoProfile -Command ^
-  "$k=[Console]::ReadKey($true); if($k.Key -eq 'Enter'){exit 10} elseif($k.Key -eq 'Delete'){exit 20} else {exit 30}" > nul
+  "$limit=2500; $sw=[Diagnostics.Stopwatch]::StartNew(); while($sw.ElapsedMilliseconds -lt $limit) { if([Console]::KeyAvailable) { $k=[Console]::ReadKey($true); if($k.Key -eq 'Enter'){exit 10} elseif($k.Key -eq 'Delete'){exit 20} else {exit 30} } }; exit 40" > nul
 
 if %errorlevel%==10 (
     del "%ARCHIVE%" 2>nul
