@@ -1,14 +1,14 @@
 @echo off
 :: Set UTF-8 to correctly display special characters
 chcp 65001 > nul
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions
 
 :: =============================================================
 ::  DAVE / XTRACT – Smart-Extract for 7-Zip
 :: =============================================================
 ::  • Extracts an archive to a folder with the same name.
 ::  • Collision handling:  O-Overwrite  C-Cancel  M-Merge  I-Increment  Z-Open in 7-Zip.
-::  • After extraction:  ENTER – delete + open folder | DEL – delete | any other key or no key – exit CMD.
+::  • After extraction:  ENTER/SHIFT+ENTER – delete + open folder | DEL – delete | any other key or no key – exit CMD.
 ::  • Save this file in UTF-8 (without BOM).
 :: =============================================================
 
@@ -77,8 +77,9 @@ if defined OPEN_7ZIP (
     goto :EOF
 )
 
-:: 2b) Increment folder name
+:: 2b) Increment folder name - enable delayed expansion only for this part
 if defined NEEDINC (
+    setlocal EnableDelayedExpansion
     set "BASE=%DEST%"
     set /A N=1
 :INC_SEARCH
@@ -90,33 +91,40 @@ if defined NEEDINC (
         goto INC_SEARCH
     )
     echo Using folder "!DEST!".
+    endlocal & set "DEST=%DEST%"
 )
 
 :: 3) Create destination folder
-if not exist "!DEST!" mkdir "!DEST!"
+if not exist "%DEST%" mkdir "%DEST%"
 
 :: 4) Extract archive
 call :banner
 echo Extracting archive: %~nx1
-"%ProgramFiles%\7-Zip\7z.exe" x "%ARCHIVE%" -o"!DEST!" !SWITCH! -y
+"%ProgramFiles%\7-Zip\7z.exe" x "%ARCHIVE%" -o"%DEST%" %SWITCH% -y
 set "EXCODE=%ERRORLEVEL%"
 echo.
 
 :: 4a) Handle 7-Zip errors
 if not "%EXCODE%"=="0" goto :EXTRACT_ERROR
 
-:: 5) After extraction: ENTER=delete+open, DEL=delete, other/no key=exit (with 2.5s timeout)
+:: 5) After extraction: SHIFT+ENTER=delete+open, ENTER=delete+open, DEL=delete, other/no key=exit (with 2.5s timeout)
 call :banner
 echo Press ENTER (within 2.5 seconds) to delete archive and open folder.
 echo Press DEL (within 2.5 seconds) to delete archive only.
 echo Any other key or no key will keep the archive and exit.
 
 powershell -NoLogo -NoProfile -Command ^
-  "$limit=2500; $sw=[Diagnostics.Stopwatch]::StartNew(); while($sw.ElapsedMilliseconds -lt $limit) { if([Console]::KeyAvailable) { $k=[Console]::ReadKey($true); if($k.Key -eq 'Enter'){exit 10} elseif($k.Key -eq 'Delete'){exit 20} else {exit 30} } }; exit 40" > nul
+  "$limit=2500; $sw=[Diagnostics.Stopwatch]::StartNew(); while($sw.ElapsedMilliseconds -lt $limit) { if([Console]::KeyAvailable) { $k=[Console]::ReadKey($true); if($k.Key -eq 'Enter' -and $k.Modifiers -eq 'Shift'){exit 15} elseif($k.Key -eq 'Enter'){exit 10} elseif($k.Key -eq 'Delete'){exit 20} else {exit 30} } }; exit 40" > nul
 
-if %errorlevel%==10 (
+if %errorlevel%==15 (
+    :: Shift+Enter: delete archive and open folder
     del "%ARCHIVE%" 2>nul
-    start "" explorer.exe "!DEST!"
+    start "" explorer.exe "%DEST%"
+    exit
+) else if %errorlevel%==10 (
+    :: Enter: delete archive and open folder
+    del "%ARCHIVE%" 2>nul
+    start "" explorer.exe "%DEST%"
     exit
 ) else if %errorlevel%==20 (
     del "%ARCHIVE%" 2>nul
