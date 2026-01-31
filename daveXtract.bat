@@ -1,14 +1,14 @@
 @echo off
 :: Set UTF-8 to correctly display special characters
 chcp 65001 > nul
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 :: =============================================================
 ::  DAVE / XTRACT – Smart-Extract for 7-Zip
 :: =============================================================
 ::  • Extracts an archive to a folder with the same name.
 ::  • Collision handling:  O-Overwrite  C-Cancel  M-Merge  I-Increment  Z-Open in 7-Zip.
-::  • After extraction:  ENTER/SHIFT+ENTER – delete + open folder | DEL – delete | any other key or no key – exit CMD.
+::  • After extraction:  SHIFT+ENTER – delete + open folder | ENTER – open folder | DEL – delete | any other key or no key – exit CMD.
 ::  • Save this file in UTF-8 (without BOM).
 :: =============================================================
 
@@ -21,6 +21,7 @@ echo ██║░░██║███████║╚██╗░██╔╝
 echo ██║░░██║██╔══██║░╚████╔╝░██╔══╝░░  ░██╔╝░░  ░██╔██╗░░░░██║░░░██╔══██╗██╔══██║██║░░██╗░░░██║░░░
 echo ██████╔╝██║░░██║░░╚██╔╝░░███████╗  ██╔╝░░░  ██╔╝╚██╗░░░██║░░░██║░░██║██║░░██║╚█████╔╝░░░██║░░░
 echo ╚═════╝░╚═╝░░╚═╝░░░╚═╝░░░╚══════╝  ╚═╝░░░░  ╚═╝░░╚═╝░░░╚═╝░░░╚═╝░░╚═╝╚═╝░░╚═╝░╚════╝░░░░╚═╝░░░
+echo v1.2
 echo.
 goto :eof
 
@@ -107,30 +108,32 @@ echo.
 :: 4a) Handle 7-Zip errors
 if not "%EXCODE%"=="0" goto :EXTRACT_ERROR
 
-:: 5) After extraction: SHIFT+ENTER=delete+open, ENTER=delete+open, DEL=delete, other/no key=exit (with 2.5s timeout)
+:: 5) After extraction: interaction logic
 call :banner
-echo Press ENTER (within 2.5 seconds) to delete archive and open folder.
-echo Press DEL (within 2.5 seconds) to delete archive only.
-echo Any other key or no key will keep the archive and exit.
+echo  [ENTER] Open folder
+echo  [DEL]   Delete archive and exit
+echo  [SHIFT+ENTER] Delete archive and open folder
+echo.
+echo Press any other key to exit.
 
 powershell -NoLogo -NoProfile -Command ^
-  "$limit=2500; $sw=[Diagnostics.Stopwatch]::StartNew(); while($sw.ElapsedMilliseconds -lt $limit) { if([Console]::KeyAvailable) { $k=[Console]::ReadKey($true); if($k.Key -eq 'Enter' -and $k.Modifiers -eq 'Shift'){exit 15} elseif($k.Key -eq 'Enter'){exit 10} elseif($k.Key -eq 'Delete'){exit 20} else {exit 30} } }; exit 40" > nul
+  "$k = [Console]::ReadKey($true); if($k.Key -eq 'Enter'){ if($k.Modifiers -eq 'Shift'){ exit 15 } exit 10 }; if($k.Key -eq 'Delete'){ exit 20 }; exit 30"
+set "RESULT_CODE=%ERRORLEVEL%"
 
-if %errorlevel%==15 (
+if %RESULT_CODE%==15 (
     :: Shift+Enter: delete archive and open folder
     del "%ARCHIVE%" 2>nul
-    start "" explorer.exe "%DEST%"
-    exit
-) else if %errorlevel%==10 (
-    :: Enter: delete archive and open folder
+    start explorer.exe "%DEST%"
+    goto :EOF
+) else if %RESULT_CODE%==10 (
+    :: Enter: open folder only
+    start explorer.exe "%DEST%"
+    goto :EOF
+) else if %RESULT_CODE%==20 (
     del "%ARCHIVE%" 2>nul
-    start "" explorer.exe "%DEST%"
-    exit
-) else if %errorlevel%==20 (
-    del "%ARCHIVE%" 2>nul
-    exit
+    goto :EOF
 ) else (
-    exit
+    goto :EOF
 )
 
 :EXTRACT_ERROR

@@ -1,7 +1,7 @@
 daveXtract – macOS-Style Archive Extraction for Windows
 ===================================================
 
-**daveXtract** brings macOS-style archive extraction to Windows. Double-click any archive → extract to folder → delete original → open folder. Simple as that.
+**daveXtract** brings macOS-style archive extraction to Windows. Double-click any archive → extract to folder → choose what to do next. Simple as that.
 
 The Problem
 -----------
@@ -19,7 +19,7 @@ The Solution
 
 1.  ✅ Extract to folder with same name
 2.  ✅ Handle folder collisions intelligently
-3.  ✅ Ask: delete archive + open folder? 
+3.  ✅ Choose: open folder, delete archive, or both
 4.  ✅ Fast operation with 7-Zip backend
 
 Installation
@@ -49,16 +49,17 @@ Usage
 
 Double-click any archive → automatically extracts to folder → choose what to do next:
 
-* **ENTER** – delete archive and open folder  
-* **DEL** – delete archive only  
-* **Any other key** – exit without changes  
+* **ENTER** – open folder only
+* **SHIFT+ENTER** – delete archive and open folder
+* **DEL** – delete archive only
+* **Any other key** – exit without changes
 
 ### ⏱ 2.5-Second Countdown
 
 After extraction, the script waits **2.5 seconds** for your key press:
 
-- If you press **ENTER** or **DEL** within the countdown → action happens immediately.  
-- If no key is pressed in that time → the script exits and leaves the archive untouched.  
+- If you press **ENTER**, **SHIFT+ENTER**, or **DEL** within the countdown → action happens immediately.
+- If no key is pressed in that time → the script exits and leaves the archive untouched.
 
 ### Folder Collisions
 
